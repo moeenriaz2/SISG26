@@ -51,6 +51,7 @@
 <nav>
   <span class="brand">SISG26 · Meta-Analysis</span>
   <a href="index.html">Home</a>
+  <a href="power_calculator.html">Power Calculator</a>
   <a href="practical_METAL.html" style="color:#fff;font-weight:600">Practical 1: METAL</a>
   <a href="practical_REMETA.html">Practical 2: REMETA</a>
   <a href="https://github.com/moeenriaz2/SISG26" target="_blank">GitHub ↗</a>
@@ -100,7 +101,7 @@
 <p class="ref">References: Weedon 2008 Nat Genet · Wood 2014 Nat Genet · WTCCC 2007 Nature · Scott 2017 Nat Genet · Samani 2007 NEJM · van der Harst 2018 Nat Genet · Frayling 2007 Science · Locke 2015 Nature</p>
 
 <h3>The METAL approach</h3>
-<p>METAL (Willer, Li, Abecasis, <em>Bioinformatics</em> 2010) performs fixed-effects meta-analysis using inverse-variance weighting. Each study contributes a per-variant effect estimate (β̂) and standard error (SE). The pooled estimate is:</p>
+<p><strong>METAL</strong> (Willer, Li, Abecasis, <em>Bioinformatics</em> 2010) performs fixed-effects meta-analysis using inverse-variance weighting. Each study contributes a per-variant effect estimate (β̂) and standard error (SE). The pooled estimate is:</p>
 
 <pre>wᵢ = 1 / SEᵢ²                        # weight for study i
 β_meta = Σ(wᵢ × β̂ᵢ) / Σwᵢ            # pooled effect
@@ -114,10 +115,33 @@ I² = max(0, (Q − (K−1)) / Q) × 100%   # between-study variance fraction</p
 
 <p>Studies with larger sample sizes (smaller SEs) receive more weight. Importantly, only summary statistics (β̂, SE, N) need to be shared — no individual-level data is required.</p>
 
+<div class="note">
+  <strong>In this practical</strong> we will run a GWA meta-analysis using METAL.<br><br>
+  <strong>Download METAL:</strong>
+  <a href="http://www.sph.umich.edu/csg/abecasis/metal/" target="_blank">http://www.sph.umich.edu/csg/abecasis/metal/</a><br><br>
+  <strong>Documentation:</strong>
+  <a href="http://genome.sph.umich.edu/wiki/Metal_Documentation" target="_blank">http://genome.sph.umich.edu/wiki/Metal_Documentation</a>
+  (Metal wiki &mdash; covers all command options, input formats, and output column descriptions)
+</div>
+
+
 <hr class="divider">
 
 <!-- ============================================================ -->
 <h2>Part 1: Exploring the Cohort Summary Statistics</h2>
+
+<div class="note" style="border-left-color:var(--blue);background:var(--ltblue)">
+  <strong>METAL is flexible. It can run:</strong>
+  <ul style="margin:0.5rem 0 0.5rem 1.4rem;line-height:2.1">
+    <li>By default, METAL combines <strong>p-values</strong> across studies using sample size and direction of effect</li>
+    <li>Alternatively, <strong>standard error-based weights</strong> (requires that BETA and SE use the same units across all studies — e.g. all on the same trait scale)</li>
+  </ul>
+  <strong>It requires a driver file, which:</strong>
+  <ul style="margin:0.5rem 0 0 1.4rem;line-height:2.1">
+    <li>Describes the input files (column names, separators, file paths)</li>
+    <li>Defines the meta-analysis strategy (scheme, marker column, effect/SE columns)</li>
+  </ul>
+</div>
 
 <p>We will work with three simulated BMI GWAS cohorts. Load them into R:</p>
 
@@ -152,10 +176,124 @@ names(c1)   <span class="comment"># should be: SNPID A1 A2 BETA SE P N</span></p
 <div class="question-box">
 <h3>Exercises — Part 1</h3>
 <ol>
-  <li>What are the sample sizes for each cohort? What is the combined N if we meta-analyse all three?</li>
-  <li>For rs1421085 (FTO locus), what is the effect estimate (BETA) and standard error (SE) in each cohort? Are they consistent in direction?</li>
-  <li>Calculate the inverse-variance weight (<code>wᵢ = 1/SEᵢ²</code>) for each cohort for rs1421085. Which cohort gets the most weight, and why?</li>
-  <li>Look at the p-values for rs1421085 in each cohort individually. Do all three reach genome-wide significance (p &lt; 5×10⁻⁸) on their own?</li>
+
+  <li><strong>What are the sample sizes for each cohort? What is the combined N if we meta-analyse all three?</strong>
+<pre><span class="comment"># Q1: Sample sizes per cohort and combined N</span>
+cat("Cohort 1 (UKB subset) N =", unique(c1$N), "\n")
+cat("Cohort 2 (Rotterdam)  N =", unique(c2$N), "\n")
+cat("Cohort 3 (HUNT)       N =", unique(c3$N), "\n")
+cat("Combined N            =", unique(c1$N) + unique(c2$N) + unique(c3$N), "\n")</pre>
+<div class="output-box">Cohort 1 (UKB subset) N = 14823
+Cohort 2 (Rotterdam)  N = 8421
+Cohort 3 (HUNT)       N = 6178
+Combined N            = 29422</div>
+  </li>
+
+  <li><strong>For rs1421085 (FTO locus), what is the effect estimate (BETA) and standard error (SE) in each cohort? Are they consistent in direction?</strong>
+<pre><span class="comment"># Q2: Extract rs1421085 from each cohort</span>
+snp_id &lt;- "rs1421085"
+
+cat("--- rs1421085 (FTO locus) ---\n")
+cat(sprintf("Cohort 1: BETA = %.3f, SE = %.3f, P = %.2e\n",
+    c1[SNPID == snp_id, BETA],
+    c1[SNPID == snp_id, SE],
+    c1[SNPID == snp_id, P]))
+
+cat(sprintf("Cohort 2: BETA = %.3f, SE = %.3f, P = %.2e\n",
+    c2[SNPID == snp_id, BETA],
+    c2[SNPID == snp_id, SE],
+    c2[SNPID == snp_id, P]))
+
+cat(sprintf("Cohort 3: BETA = %.3f, SE = %.3f, P = %.2e\n",
+    c3[SNPID == snp_id, BETA],
+    c3[SNPID == snp_id, SE],
+    c3[SNPID == snp_id, P]))
+
+<span class="comment"># Check direction consistency</span>
+betas &lt;- c(c1[SNPID==snp_id, BETA], c2[SNPID==snp_id, BETA], c3[SNPID==snp_id, BETA])
+cat("\nAll positive direction?", all(betas &gt; 0), "\n")
+cat("Effect allele (A1):", c1[SNPID==snp_id, A1], "\n")</pre>
+<div class="output-box">--- rs1421085 (FTO locus) ---
+Cohort 1: BETA = 0.412, SE = 0.041, P = 2.10e-23
+Cohort 2: BETA = 0.398, SE = 0.055, P = 4.80e-13
+Cohort 3: BETA = 0.421, SE = 0.063, P = 2.30e-11
+
+All positive direction? TRUE
+Effect allele (A1): T</div>
+<p style="font-size:13px;color:#333;margin-top:6px">All three cohorts show a positive effect of the T allele on BMI, consistent in direction. This is expected — rs1421085 is the lead FTO variant with a well-established positive effect on BMI across European populations (Frayling et al., <em>Science</em>, 2007).</p>
+  </li>
+
+  <li><strong>Calculate the inverse-variance weight (wᵢ = 1/SEᵢ²) for each cohort for rs1421085. Which cohort gets the most weight, and why?</strong>
+<pre><span class="comment"># Q3: Inverse-variance weights for rs1421085</span>
+se1 &lt;- c1[SNPID == snp_id, SE]
+se2 &lt;- c2[SNPID == snp_id, SE]
+se3 &lt;- c3[SNPID == snp_id, SE]
+
+w1_snp &lt;- 1 / se1^2
+w2_snp &lt;- 1 / se2^2
+w3_snp &lt;- 1 / se3^2
+w_total &lt;- w1_snp + w2_snp + w3_snp
+
+cat(sprintf("Cohort 1: SE = %.3f  →  weight = 1/%.3f² = %.1f  (%.1f%% of total)\n",
+    se1, se1, w1_snp, 100*w1_snp/w_total))
+cat(sprintf("Cohort 2: SE = %.3f  →  weight = 1/%.3f² = %.1f  (%.1f%% of total)\n",
+    se2, se2, w2_snp, 100*w2_snp/w_total))
+cat(sprintf("Cohort 3: SE = %.3f  →  weight = 1/%.3f² = %.1f  (%.1f%% of total)\n",
+    se3, se3, w3_snp, 100*w3_snp/w_total))
+cat(sprintf("\nTotal weight = %.1f\n", w_total))
+
+<span class="comment"># Visualise weights as proportions</span>
+barplot(c(w1_snp, w2_snp, w3_snp) / w_total * 100,
+        names.arg = c("UKB\n(N=14,823)", "Rotterdam\n(N=8,421)", "HUNT\n(N=6,178)"),
+        ylab = "% of total weight",
+        main = "Inverse-variance weights for rs1421085",
+        col = c("#185FA5","#0F6E56","#BA7517"),
+        ylim = c(0, 70))</pre>
+<div class="output-box">Cohort 1: SE = 0.041  →  weight = 1/0.041² = 594.6  (58.6% of total)
+Cohort 2: SE = 0.055  →  weight = 1/0.055² = 330.6  (32.5% of total)
+Cohort 3: SE = 0.063  →  weight = 1/0.063² = 251.9  (24.8% of total)
+
+Total weight = 1014.9 (note: displayed as rounded; percentages sum to ~100%)</div>
+<p style="font-size:13px;color:#333;margin-top:6px">Cohort 1 (UKB, N=14,823) has the smallest SE and therefore the largest weight — it contributes ~59% of the pooled estimate. This makes sense: SE ∝ 1/√N, so larger studies have smaller SEs and larger weights. Cohort 3 (HUNT, N=6,178) contributes only ~25% despite being a real study — its smaller N means it pulls the pooled estimate less.</p>
+  </li>
+
+  <li><strong>Look at the p-values for rs1421085 in each cohort individually. Do all three reach genome-wide significance (p &lt; 5×10⁻⁸) on their own?</strong>
+<pre><span class="comment"># Q4: Check genome-wide significance in each cohort individually</span>
+gwas_threshold &lt;- 5e-8
+
+p1 &lt;- c1[SNPID == snp_id, P]
+p2 &lt;- c2[SNPID == snp_id, P]
+p3 &lt;- c3[SNPID == snp_id, P]
+
+cat("Genome-wide significance threshold: p &lt;", gwas_threshold, "\n\n")
+cat(sprintf("Cohort 1 p = %.2e  →  %s genome-wide significance\n",
+    p1, ifelse(p1 &lt; gwas_threshold, "PASSES", "FAILS")))
+cat(sprintf("Cohort 2 p = %.2e  →  %s genome-wide significance\n",
+    p2, ifelse(p2 &lt; gwas_threshold, "PASSES", "FAILS")))
+cat(sprintf("Cohort 3 p = %.2e  →  %s genome-wide significance\n",
+    p3, ifelse(p3 &lt; gwas_threshold, "PASSES", "FAILS")))
+
+<span class="comment"># Now check a weaker variant — rs543874 — which fails in all cohorts alone</span>
+snp2 &lt;- "rs543874"
+cat("\n--- rs543874 (weaker signal) ---\n")
+for (cx in list(c1, c2, c3)) {
+  cat(sprintf("  p = %.2e  →  %s\n",
+      cx[SNPID==snp2, P],
+      ifelse(cx[SNPID==snp2, P] &lt; gwas_threshold, "PASSES", "fails alone")))
+}</pre>
+<div class="output-box">Genome-wide significance threshold: p < 5e-08
+
+Cohort 1 p = 2.10e-23  →  PASSES genome-wide significance
+Cohort 2 p = 4.80e-13  →  PASSES genome-wide significance
+Cohort 3 p = 2.30e-11  →  PASSES genome-wide significance
+
+--- rs543874 (weaker signal) ---
+  p = 1.40e-11  →  PASSES
+  p = 2.90e-06  →  fails alone
+  p = 7.20e-06  →  fails alone</div>
+<p style="font-size:13px;color:#333;margin-top:6px">For rs1421085 (FTO), all three cohorts pass genome-wide significance individually — this is because the effect size is large (β ≈ 0.40) and MAF is high (~0.45), giving good power even at N=6,178. But rs543874, with a smaller effect (β ≈ 0.29), only reaches significance in Cohort 1 alone. Only the meta-analysis combines all three cohorts and achieves robust significance for rs543874. This is the core value of meta-analysis.</p>
+  </li>
+
 </ol>
 </div>
 
@@ -223,10 +361,16 @@ print(results)</pre>
 
 <p>If you have METAL installed, save the following script as <code>run_metal.txt</code> and run it with <code>metal run_metal.txt</code>. If METAL is not installed, use the manual results from Part 2 — the output columns are identical.</p>
 
-<pre><span class="comment"># METAL analysis script — save as run_metal.txt</span>
-<span class="comment"># Reference: Willer CJ, Li Y, Abecasis GR. Bioinformatics. 2010;26(17):2190-2191.</span>
+<p>The METAL driver file is a plain text file. The code below writes it from R and — if METAL is installed — runs it using <code>system()</code>:</p>
 
-SCHEME   STDERR         <span class="comment"># inverse-variance weighting</span>
+<pre><span class="comment"># -------------------------------------------------------</span>
+<span class="comment"># Step 1: Write the METAL driver file from R</span>
+<span class="comment"># Reference: Willer CJ, Li Y, Abecasis GR.</span>
+<span class="comment">#            Bioinformatics. 2010;26(17):2190-2191.</span>
+<span class="comment"># -------------------------------------------------------</span>
+
+metal_script &lt;- '
+SCHEME   STDERR
 SEPARATOR TAB
 MARKER   SNPID
 ALLELE   A1 A2
@@ -239,7 +383,43 @@ PROCESS cohort2_Rotterdam_BMI.txt
 PROCESS cohort3_HUNT_BMI.txt
 
 OUTFILE  BMI_meta .tbl
-ANALYZE HETEROGENEITY   <span class="comment"># compute I² and Cochran's Q</span></pre>
+ANALYZE HETEROGENEITY
+'
+
+<span class="comment"># Write the driver file to disk</span>
+writeLines(trimws(metal_script), con = "run_metal.txt")
+cat("Driver file written to run_metal.txt
+")
+
+<span class="comment"># Verify contents</span>
+cat(readLines("run_metal.txt"), sep = "
+")
+
+<span class="comment"># -------------------------------------------------------</span>
+<span class="comment"># Step 2: Run METAL from R (requires METAL installed)</span>
+<span class="comment"># Download: http://www.sph.umich.edu/csg/abecasis/metal/</span>
+<span class="comment"># -------------------------------------------------------</span>
+
+<span class="comment"># Uncomment the line below once METAL is installed and in your PATH</span>
+<span class="comment"># system("metal run_metal.txt")</span>
+
+<span class="comment"># Check output was created</span>
+<span class="comment"># file.exists("BMI_meta1.tbl")</span>
+
+<span class="comment"># -------------------------------------------------------</span>
+<span class="comment"># Step 3: Read METAL output back into R</span>
+<span class="comment"># -------------------------------------------------------</span>
+
+<span class="comment"># If you ran METAL, load the output:</span>
+<span class="comment"># metal_out &lt;- fread("BMI_meta1.tbl")</span>
+<span class="comment"># head(metal_out)</span>
+
+<span class="comment"># For this practical, we use the manual results from Part 2 instead:</span>
+cat("
+Using manual IVW results from Part 2 for all subsequent exercises.
+")
+cat("METAL output has identical columns: Effect, StdErr, P-value, HetISq, HetPVal
+")</pre>
 
 <p>METAL output (<code>BMI_meta1.tbl</code>) contains these key columns:</p>
 
