@@ -1,6 +1,6 @@
 # SISG26 — Meta-Analysis in Statistical Genetics
 
-A hands-on course covering GWAS and ExWAS meta-analysis using **METAL** and **REMETA**, with practical exercises modelled on the [SISG 2025 QG3 format](https://joellembatchou.github.io/SISG2025_Association_Mapping/) by Joelle Mbatchou & Michael Epstein.
+A hands-on course covering GWAS and ExWAS meta-analysis using **METAL** and **REMETA**, with practical exercises modelled on the [SISG 2025 QG3 format](https://joellembatchou.github.io/SISG2025_Association_Mapping/) by Joelle.
 
 ## 🌐 Course Website
 
