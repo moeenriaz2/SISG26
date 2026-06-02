@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practical 2 — Gene-Based ExWAS Meta-Analysis with REMETA</title>
+<style>
+  :root{--navy:#1E3A5F;--blue:#185FA5;--ltblue:#EBF3FB;--teal:#0F6E56;--amber:#BA7517;--green:#3B6D11;--red:#A32D2D;--gray:#5F5E5A;--offwh:#F8FAFD;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a1a;line-height:1.7;font-size:15px;}
+  nav{background:var(--navy);padding:0 2rem;display:flex;align-items:center;gap:2rem;height:52px;position:sticky;top:0;z-index:100;}
+  nav a{color:#B5D4F4;text-decoration:none;font-size:14px;}
+  nav a:hover{color:#fff;}
+  nav .brand{color:#fff;font-weight:600;font-size:15px;}
+  .hero{background:var(--teal);color:#fff;padding:1.5rem 2rem;}
+  .hero h1{font-size:1.6rem;font-weight:700;}
+  .hero p{color:#B5F0DE;font-size:13px;margin-top:4px;}
+  .container{max-width:860px;margin:0 auto;padding:2rem;}
+  h2{font-size:1.2rem;color:var(--navy);margin:2.5rem 0 0.75rem;border-bottom:2px solid var(--ltblue);padding-bottom:0.4rem;}
+  h3{font-size:1rem;color:var(--blue);margin:1.5rem 0 0.5rem;}
+  h4{font-size:0.95rem;color:var(--teal);margin:1rem 0 0.4rem;font-style:italic;}
+  p{margin-bottom:0.75rem;color:#333;}
+  ul,ol{margin:0.5rem 0 0.75rem 1.5rem;color:#333;}
+  li{margin-bottom:0.3rem;}
+  code{background:#f0f4ff;color:var(--navy);font-size:13px;padding:2px 6px;border-radius:4px;font-family:'Courier New',monospace;}
+  pre{background:#1E1E2E;color:#A6E3A1;padding:1rem 1.25rem;border-radius:8px;font-size:13px;overflow-x:auto;margin:0.75rem 0;line-height:1.8;font-family:'Courier New',monospace;}
+  pre .comment{color:#6272A4;}
+  .question-box{background:var(--offwh);border:1px solid #dce8f5;border-left:4px solid var(--blue);border-radius:0 8px 8px 0;padding:0.9rem 1.1rem;margin:1rem 0;}
+  .question-box ol{margin-left:1.2rem;}
+  .question-box li{margin-bottom:0.6rem;}
+  .extra-box{background:#F0FFF0;border:1px solid #B7DDB7;border-left:4px solid var(--green);border-radius:0 8px 8px 0;padding:0.9rem 1.1rem;margin:1rem 0;}
+  .note{background:#FFF8E7;border-left:3px solid var(--amber);padding:0.75rem 1rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:13px;}
+  .teal-note{background:#E1F5EE;border-left:3px solid var(--teal);padding:0.75rem 1rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:13px;}
+  .ref{font-size:12px;color:var(--gray);font-style:italic;}
+  .output-box{background:#F5F5F5;border:1px solid #ddd;border-radius:6px;padding:0.75rem 1rem;font-family:'Courier New',monospace;font-size:12px;color:#333;margin:0.5rem 0;white-space:pre;}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:0.75rem 0;}
+  th{background:var(--navy);color:#fff;padding:7px 10px;text-align:left;}
+  td{padding:7px 10px;border-bottom:1px solid #e5e5e5;}
+  tr:nth-child(even) td{background:var(--offwh);}
+  .footer{background:var(--navy);color:#B5D4F4;text-align:center;padding:1.5rem;font-size:13px;margin-top:3rem;}
+  .divider{border:none;border-top:1px solid #e5e5e5;margin:2rem 0;}
+  .pipeline-step{display:flex;gap:12px;align-items:flex-start;margin:0.75rem 0;}
+  .step-num{background:var(--teal);color:#fff;font-weight:700;font-size:14px;min-width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .step-body{flex:1;}
+  .step-body strong{color:var(--navy);display:block;margin-bottom:2px;}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">SISG26 · Meta-Analysis</span>
+  <a href="index.html">Home</a>
+  <a href="power_calculator.html">Power Calculator</a>
+  <a href="practical_METAL.html">Practical 1: METAL</a>
+  <a href="practical_REMETA.html" style="color:#fff;font-weight:600">Practical 2: REMETA</a>
+  <a href="https://github.com/moeenriaz2/SISG26" target="_blank">GitHub ↗</a>
+</nav>
+
+<div class="hero">
+  <h1>Practical 2 — Gene-Based ExWAS Meta-Analysis with REMETA</h1>
+  <p>SISG26 · Meta-Analysis in Statistical Genetics · Last updated: 2025</p>
+</div>
+
+<div class="container">
+
+<div class="note">
+  <strong>Before you begin:</strong> Complete Practical 1 first. This practical uses <code>data.table</code> and <code>ggplot2</code>.
+  Install with: <code>install.packages(c("data.table","ggplot2","dplyr"))</code>
+  <br><br>
+  <strong>REMETA pipeline note:</strong> The full REGENIE → REMETA pipeline requires large WES/WGS data and cannot run in this practical session. Instead, we work with <em>simulated REMETA output</em> that exactly mirrors the real tool's output format — so you learn to interpret and QC gene-based ExWAS results. The pipeline commands are provided for reference.
+  <br><br>
+  <span style="color:var(--amber)"><strong>Note:</strong> All gene-level results are simulated for teaching. Where published studies are referenced, this is explicitly stated.</span>
+</div>
+
+<!-- ============================================================ -->
+<h2>Background: Why Gene-Based Tests for Rare Variants?</h2>
+
+<p>Common variants (MAF &gt; 1%) are well-powered in consortia with N &gt; 100,000. Rare coding variants (MAF &lt; 1%) present a fundamentally different problem: each individual variant is too rare for single-variant tests to be adequately powered, even at biobank scale.</p>
+
+<p>The solution: <strong>aggregate rare variants within a gene</strong> into a single test statistic. If multiple rare variants in the same gene have effects in the same direction (loss-of-function, damaging missense), their combined signal can reach statistical significance.</p>
+
+<h3>The three core gene-based tests</h3>
+
+<table>
+  <tr><th>Test</th><th>What it detects</th><th>Formula</th><th>Best for</th></tr>
+  <tr><td><strong>Burden</strong></td><td>Unidirectional effects (all variants increase or all decrease risk)</td><td>T = (Σ w_j S_j)² / Var</td><td>LoF-only masks; strong prior for direction</td></tr>
+  <tr><td><strong>SKAT</strong></td><td>Mixed-direction effects; variance component test</td><td>Q = S′KS; p via Davies</td><td>Missense variants with uncertain direction</td></tr>
+  <tr><td><strong>SKAT-O</strong></td><td>Optimal combination of Burden and SKAT</td><td>T(ρ) = ρ·Burden + (1−ρ)·SKAT</td><td>Default — no prior on direction needed</td></tr>
+  <tr><td><strong>ACAT-O</strong></td><td>Cauchy combination of p-values across masks</td><td>T = Σ tan((0.5−p_k)π)</td><td>Multiple masks; robust omnibus test</td></tr>
+</table>
+
+<p class="ref">References: Lee et al., Biostatistics, 2012 [SKAT-O] · Liu et al., Am J Hum Genet, 2019 [ACAT]</p>
+
+<h3>Why meta-analysis is essential for rare variants</h3>
+
+<p>Consider a gene with 12 rare pLoF variants (MAF &lt; 0.1% each). The cumulative MAF across all 12 variants is ~1.2%. To detect an OR of 2.0 for the burden of LoF variants using SKAT-O at p &lt; 2.5×10⁻⁶ (ExWAS threshold):</p>
+
+<table>
+  <tr><th>N cases (50% fraction)</th><th>Power (SKAT-O, OR=2)</th><th>Verdict</th></tr>
+  <tr><td>5,000</td><td>~8%</td><td style="color:var(--red)">Essentially undiscoverable</td></tr>
+  <tr><td>50,000</td><td>~61%</td><td style="color:var(--amber)">Underpowered for most genes</td></tr>
+  <tr><td>200,000</td><td>~97%</td><td style="color:var(--green)">Well powered — requires biobank meta-analysis</td></tr>
+</table>
+<p class="ref">[Simulated power estimates for teaching. Real values depend on variant-level MAF distribution, effect sizes, and mask composition.]</p>
+
+<p><strong>Key published example:</strong> GPR75 rare loss-of-function variant (MAF &lt; 0.01%) associated with 5.3 kg lower BMI was identified in N=640,000 across multiple biobanks. Invisible below N=200,000. (Akbari et al., <em>Science</em>, 2021)</p>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<h2>The REMETA Framework</h2>
+
+<p>REMETA (Mbatchou et al., <em>bioRxiv</em>, 2024) extends REGENIE to multi-cohort gene-based ExWAS meta-analysis. Its key innovation: instead of sharing a per-phenotype covariance matrix (gigabytes of data per trait), each site shares a <em>single sparse LD reference file</em> that is reused across all phenotypes.</p>
+
+<div class="pipeline-step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <strong>REGENIE Step 1 (per site)</strong>
+    Whole-genome regression to account for relatedness and population stratification. Run once per cohort. Output: leave-one-chromosome-out (LOCO) predictions.
+  </div>
+</div>
+<div class="pipeline-step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <strong>REGENIE Step 2 (per site)</strong>
+    Exome association testing. Output: per-variant score statistics + <em>sparse LD reference</em> (stored once per site, reused for all phenotypes). SPA correction applied for binary traits with case-control imbalance.
+  </div>
+</div>
+<div class="pipeline-step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <strong>REMETA (meta-analyst)</strong>
+    Receives summary statistics + LD references from all sites. Reconstructs the covariance matrix Σ = Cov(S) per gene on the fly. Runs Burden, SKAT, SKAT-O, ACAT-O across all gene-mask combinations.
+  </div>
+</div>
+
+<pre><span class="comment"># Illustrative REGENIE Step 2 command (per cohort)</span>
+<span class="comment"># Reference: Mbatchou et al., Nat Genet, 2021</span>
+regenie \
+  --step 2 \
+  --bgen cohort1_exome.bgen \
+  --sample cohort1_exome.sample \
+  --phenoFile cohort1_phenotypes.txt \
+  --covarFile cohort1_covariates.txt \
+  --bt --spa \
+  --pred cohort1_step1_pred.list \
+  --anno-file gene_annotations_GRCh38.txt \
+  --set-list gene_set_list.txt \
+  --mask-def mask_definitions.txt \
+  --aaf-bins 0.001,0.01 \
+  --write-mask-snplist \
+  --out cohort1_step2
+
+<span class="comment"># REMETA meta-analysis command</span>
+<span class="comment"># Reference: Mbatchou et al., bioRxiv, 2024</span>
+remeta \
+  --gene-based \
+  --cohort cohort1_step2_T2D.regenie --ld-ref cohort1_step2.ld_ref \
+  --cohort cohort2_step2_T2D.regenie --ld-ref cohort2_step2.ld_ref \
+  --pheno T2D \
+  --tests burden,skat,skato,acato \
+  --mask pLoF,pLoF_missense5 \
+  --af-range 0 0.01 \
+  --min-mac 5 --spa \
+  --out T2D_ExWAS_meta</pre>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<h2>Part 1: Loading and Exploring Simulated REMETA Output</h2>
+
+<p>The following R code simulates REMETA output that mirrors the exact column structure of the real tool. This is based on known biology of T2D-associated genes.</p>
+
+<pre><span class="comment"># Simulated REMETA output — exact column structure mirrors real REMETA</span>
+<span class="comment"># [Simulated for teaching; gene directions based on published T2D genetics]</span>
+library(data.table)
+
+remeta_out &lt;- data.table(
+  GENE        = c("PCSK9","MC4R","GIPR","GPR75","ADCY3",
+                  "SLC2A4","PPARG","TCF7L2","KCNJ11","GCKR"),
+  CHR         = c(1, 18, 19, 2, 2, 17, 3, 10, 11, 2),
+  N_VARIANTS  = c(12, 8, 5, 14, 9, 6, 11, 9, 7, 10),
+  MASK        = rep("pLoF_missense5", 10),
+  TEST        = rep("SKAT-O", 10),
+  MAC         = c(234, 189, 142, 312, 98, 201, 167, 156, 88, 278),
+  BETA_burden = c(-0.41, -0.28, 0.22, -0.51, 0.19, -0.31, -0.35, -0.44, -0.29, 0.18),
+  SE_burden   = c(0.065, 0.071, 0.092, 0.058, 0.104, 0.078, 0.081, 0.070, 0.095, 0.069),
+  P_META      = c(2.1e-9, 4.8e-5, 0.021, 1.3e-12, 0.068, 3.2e-5, 8.9e-6, 9.7e-9, 0.14, 5.1e-4),
+  P_HET       = c(0.34, 0.51, 0.22, 0.48, 0.19, 0.61, 0.39, 0.45, 0.28, 0.57),
+  AAF_META    = c(0.0048, 0.0031, 0.0021, 0.0061, 0.0018, 0.0039, 0.0032, 0.0030, 0.0017, 0.0054),
+  N_COHORTS   = rep(2, 10)
+)
+
+<span class="comment"># Examine the output</span>
+str(remeta_out)
+print(remeta_out)</pre>
+
+<div class="output-box">Classes 'data.table' and 'data.frame': 10 obs. of 12 variables:
+ $ GENE       : chr "PCSK9" "MC4R" "GIPR" "GPR75" ...
+ $ MASK       : chr "pLoF_missense5" ...
+ $ TEST       : chr "SKAT-O" ...
+ $ MAC        : num 234 189 142 312 98 ...
+ $ BETA_burden: num -0.41 -0.28 0.22 -0.51 ...
+ $ SE_burden  : num 0.065 0.071 0.092 ...
+ $ P_META     : num 2.1e-09 4.8e-05 ...
+ $ P_HET      : num 0.34 0.51 0.22 ...</div>
+
+<div class="question-box">
+<h3>Exercises — Part 1</h3>
+<ol>
+  <li>How many genes are in the output? How many variants per gene on average?</li>
+  <li>What does the <code>MASK</code> column mean? What is <code>pLoF_missense5</code>? What kinds of variants would be included vs excluded?</li>
+  <li>The <code>MAC</code> column reports the minor allele count pooled across cohorts. Why is MAC more useful than MAF for rare variant quality control?</li>
+  <li>What is the ExWAS gene-based significance threshold? How is it derived? (Hint: ~20,000 protein-coding genes tested.)</li>
+</ol>
+</div>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<h2>Part 2: Applying the Significance Threshold and Basic QC</h2>
+
+<pre><span class="comment"># ExWAS significance threshold</span>
+threshold &lt;- 2.5e-6   <span class="comment"># p &lt; 2.5e-6 for ~20,000 genes, alpha=0.05</span>
+
+<span class="comment"># Apply threshold</span>
+sig &lt;- remeta_out[P_META &lt; threshold]
+cat("Genes passing ExWAS threshold:", nrow(sig), "\n")
+print(sig[order(P_META), .(GENE, N_VARIANTS, MAC, BETA_burden, SE_burden, P_META, P_HET)])
+
+<span class="comment"># Compute 95% confidence intervals for significant genes</span>
+sig[, CI_lo := round(BETA_burden - 1.96 * SE_burden, 3)]
+sig[, CI_hi := round(BETA_burden + 1.96 * SE_burden, 3)]
+cat("\n95% CIs for significant genes:\n")
+print(sig[order(P_META), .(GENE, BETA_burden, CI_lo, CI_hi, P_META)])
+
+<span class="comment"># MAC quality control filter</span>
+cat("\nGenes with MAC < 10 (unreliable, should be excluded):", 
+    sum(remeta_out$MAC &lt; 10), "\n")
+cat("Genes retained after MAC >= 10:", sum(remeta_out$MAC >= 10), "\n")
+
+<span class="comment"># Heterogeneity check</span>
+het_flag &lt;- remeta_out[P_HET &lt; 0.05]
+cat("\nGenes with significant heterogeneity (P_HET &lt; 0.05):", nrow(het_flag), "\n")</pre>
+
+<div class="question-box">
+<h3>Exercises — Part 2</h3>
+<ol>
+  <li>Which genes pass the ExWAS significance threshold? List them in order of p-value.</li>
+  <li>For GPR75 (BETA = −0.510, SE = 0.058), interpret the effect estimate. What does a negative BETA mean in the context of a burden test for a disease (T2D)? Is this consistent with the published GPR75 finding (Akbari et al., <em>Science</em>, 2021)?</li>
+  <li>Compute 95% CIs for all significant genes. Does the CI for PCSK9 include zero? Does this tell you anything about the reliability of the association?</li>
+  <li>ADCY3 has P_META = 0.068 — it does not pass the threshold. Should it be reported as a "trend"? What statistical principle argues against this?</li>
+  <li>P_HET values are all &gt; 0.05. Does this mean there is definitely no heterogeneity between the two cohorts? What is the power of the heterogeneity test with K=2 studies?</li>
+</ol>
+</div>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<h2>Part 3: Comparing Tests and Masks</h2>
+
+<p>Gene-based tests are typically run across multiple masks (e.g. pLoF only, pLoF + damaging missense) and multiple tests (Burden, SKAT-O). The ACAT-O aggregated Cauchy test combines evidence across all combinations.</p>
+
+<pre><span class="comment"># Simulate results from multiple masks for PCSK9</span>
+pcsk9_masks &lt;- data.table(
+  GENE  = rep("PCSK9", 4),
+  MASK  = c("pLoF", "pLoF_missense5", "pLoF_missense1", "all_coding"),
+  TEST  = rep("SKAT-O", 4),
+  MAC   = c(78, 234, 412, 890),
+  BETA  = c(-0.82, -0.41, -0.28, -0.19),
+  SE    = c(0.142, 0.065, 0.052, 0.038),
+  P_META= c(3.2e-8, 2.1e-9, 1.8e-7, 4.1e-7)
+)
+print(pcsk9_masks)
+
+<span class="comment"># Compare Burden vs SKAT-O for all genes (simulated)</span>
+remeta_burden &lt;- copy(remeta_out)
+remeta_skat &lt;- copy(remeta_out)
+remeta_skat[, P_META := P_META * runif(.N, 0.8, 1.5)]   <span class="comment"># add noise [simulated]</span>
+
+comparison &lt;- data.table(
+  GENE    = remeta_out$GENE,
+  P_Burden= c(5.1e-9, 1.2e-4, 0.034, 2.8e-12, 0.091, 5.6e-5, 1.8e-5, 1.4e-8, 0.21, 8.3e-4),
+  P_SKATO = remeta_out$P_META
+)
+print(comparison)</pre>
+
+<div class="question-box">
+<h3>Exercises — Part 3</h3>
+<ol>
+  <li>For PCSK9, how does the p-value change across masks (pLoF → pLoF_missense5 → all_coding)? What does the pattern of effect sizes (BETA) tell you about the relative contribution of predicted LoF vs damaging missense variants?</li>
+  <li>Look at the comparison between Burden and SKAT-O p-values. For which genes does Burden outperform SKAT-O, and for which does SKAT-O do better? What does this tell you about the likely direction of effect of rare variants in each gene?</li>
+  <li>ACAT-O is described as an "omnibus test" that aggregates across masks. Why is this useful? What multiple testing correction applies when you run 4 masks × 3 tests = 12 combinations per gene?</li>
+  <li>A stricter threshold of p &lt; 6.7×10⁻⁷ is sometimes used (Bonferroni for 75,000 gene-mask combinations). Which genes from your significant list survive this threshold? Is this threshold always appropriate?</li>
+</ol>
+</div>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<h2>Part 4: Visualisation of ExWAS Results</h2>
+
+<pre><span class="comment"># Gene-level Manhattan plot (ExWAS)</span>
+library(ggplot2)
+
+remeta_out[, neg_log_p := -log10(P_META)]
+remeta_out[, sig := P_META &lt; 2.5e-6]
+
+ggplot(remeta_out, aes(x = reorder(GENE, -neg_log_p), y = neg_log_p, 
+                        fill = sig, color = sig)) +
+  geom_col(width = 0.6) +
+  geom_hline(yintercept = -log10(2.5e-6), linetype = "dashed", color = "gray40") +
+  scale_fill_manual(values = c("FALSE" = "#185FA5", "TRUE" = "#A32D2D")) +
+  scale_color_manual(values = c("FALSE" = "#185FA5", "TRUE" = "#A32D2D")) +
+  labs(x = "Gene", y = expression(-log[10](p)),
+       title = "T2D ExWAS gene-based meta-analysis (REMETA)",
+       subtitle = "Mask: pLoF_missense5 | Test: SKAT-O | 2 cohorts [Simulated]") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+        legend.position = "none")
+
+<span class="comment"># Effect size plot for significant genes with CIs</span>
+sig_plot &lt;- remeta_out[P_META &lt; 2.5e-6]
+sig_plot[, CI_lo := BETA_burden - 1.96 * SE_burden]
+sig_plot[, CI_hi := BETA_burden + 1.96 * SE_burden]
+
+ggplot(sig_plot, aes(x = BETA_burden, y = reorder(GENE, BETA_burden))) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_errorbarh(aes(xmin = CI_lo, xmax = CI_hi), height = 0.2, color = "#185FA5") +
+  geom_point(size = 3, color = "#0F6E56") +
+  labs(x = "Burden test β (per MAC unit)", y = "Gene",
+       title = "Effect sizes for ExWAS significant genes",
+       subtitle = "[Simulated example for teaching]") +
+  theme_minimal()</pre>
+
+<div class="question-box">
+<h3>Exercises — Part 4</h3>
+<ol>
+  <li>Run the bar chart. Which genes clearly pass the dashed significance line? Which are close to the threshold?</li>
+  <li>Generate the effect size plot. What do the negative BETA values tell you biologically for PCSK9, GPR75, and MC4R? Are these consistent with known biology? Look up each gene's known role in metabolism or cardiovascular disease.</li>
+  <li>Add gene labels to the bar chart showing the exact P_META values for significant genes. Modify the plot to colour bars by effect direction (red = risk-increasing, blue = protective).</li>
+  <li>TCF7L2 shows P_META = 9.7×10⁻⁹ for rare variant burden. TCF7L2 is well known as a T2D common variant locus (Grant et al., <em>Nat Genet</em>, 2006). Is it surprising to also see a rare variant signal there? What biological principle does this illustrate?</li>
+</ol>
+</div>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<h2>Part 5: Connecting REMETA to METAL — Single-Variant vs Gene-Based</h2>
+
+<p>REMETA and METAL address complementary questions. Understanding when to use each is essential for a complete ExWAS analysis pipeline.</p>
+
+<table>
+  <tr><th>Feature</th><th>METAL (single-variant)</th><th>REMETA (gene-based)</th></tr>
+  <tr><td>Variant MAF</td><td>Common (MAF &gt; 1%)</td><td>Rare (MAF &lt; 1%)</td></tr>
+  <tr><td>Test statistic</td><td>Single-variant Z-score</td><td>Burden, SKAT-O, ACAT-O</td></tr>
+  <tr><td>Summary stats shared</td><td>β, SE per variant</td><td>Score stats + sparse LD reference</td></tr>
+  <tr><td>Significance threshold</td><td>p &lt; 5×10⁻⁸</td><td>p &lt; 2.5×10⁻⁶ (gene-level)</td></tr>
+  <tr><td>Key software</td><td>METAL, MetaSoft, GWAMA</td><td>REMETA, MetaSTAAR, Meta-SAIGE</td></tr>
+  <tr><td>Reference</td><td>Willer 2010 Bioinformatics</td><td>Mbatchou 2024 bioRxiv</td></tr>
+</table>
+
+<pre><span class="comment"># Load Practical 1 meta-analysis results and compare with REMETA</span>
+<span class="comment"># (assumes you ran Practical 1 and have 'results' data frame in environment)</span>
+
+<span class="comment"># Common variant single-SNP signals near PCSK9 (chr1)</span>
+<span class="comment"># REMETA rare variant burden signal: PCSK9 pLoF p=2.1e-9</span>
+<span class="comment"># Are the common and rare variant signals at the same gene telling the same story?</span>
+
+cat("Single-variant top hits (METAL):\n")
+<span class="comment"># print(results[order(P_meta)][1:5, ])  # from Practical 1</span>
+
+cat("\nGene-based top hits (REMETA):\n")
+print(remeta_out[order(P_META)][1:5, .(GENE, TEST, BETA_burden, P_META)])</pre>
+
+<div class="question-box">
+<h3>Exercises — Part 5</h3>
+<ol>
+  <li>In a full ExWAS, you run both METAL (single-variant) and REMETA (gene-based) on the same cohorts. A gene shows a significant REMETA signal (p = 1×10⁻⁹) but no significant single-variant METAL hits. What does this tell you about the genetic architecture of that gene?</li>
+  <li>Conversely, a gene region has a genome-wide significant common variant GWAS hit (p = 3×10⁻¹²) but the REMETA rare variant burden test is p = 0.4. What does this pattern suggest?</li>
+  <li>REMETA requires a sparse LD reference file per cohort. Why is sharing this file not considered "individual-level data"? What information does it contain, and what does it not contain?</li>
+  <li>A study runs REMETA across 2,000 phenotypes (UK Biobank PheWAS). Without REMETA's approach, how large would the covariance matrix files be if each cohort had to share a separate LD matrix per phenotype? (Assume 20,000 genes, average 15 variants per gene.)</li>
+</ol>
+</div>
+
+<div class="extra-box">
+<h4>★ Extra Exercises</h4>
+<ol>
+  <li>Implement the ACAT-O test statistic for PCSK9 across four masks by combining the p-values:
+  <pre><span class="comment"># ACAT statistic: T = sum(tan((0.5 - p_k) * pi))</span>
+p_masks &lt;- c(3.2e-8, 2.1e-9, 1.8e-7, 4.1e-7)
+T_acat  &lt;- sum(tan((0.5 - p_masks) * pi))
+<span class="comment"># p-value from Cauchy distribution</span>
+p_acat  &lt;- 1 - pcauchy(T_acat)
+cat("ACAT p-value:", p_acat, "\n")</pre>
+  </li>
+  <li>Simulate a power calculation for a SKAT-O test: given a gene with cumulative MAC=50 across N=100,000 samples, what is the expected power to detect an OR of 1.8 under a Burden-only alternative at p &lt; 2.5×10⁻⁶?</li>
+  <li>Read the REMETA paper (Mbatchou et al., bioRxiv 2024) and identify: (a) what the "rescaling" step does mathematically, (b) which traits were used for validation, and (c) what computational saving the sparse LD approach achieves compared to the naive approach.</li>
+</ol>
+</div>
+
+<hr class="divider">
+
+<!-- ============================================================ -->
+<h2>Summary: Key Concepts</h2>
+
+<ul>
+  <li><strong>Gene-based tests</strong> aggregate rare variant signals across a gene. The choice of test (Burden vs SKAT-O) reflects a biological prior about effect direction.</li>
+  <li><strong>Masks</strong> define which variant classes are aggregated. pLoF is most interpretable; broader masks (pLoF + missense) increase power at the cost of interpretability.</li>
+  <li><strong>MAC filter</strong>: always require MAC ≥ 10 (or higher) for gene-based tests. Below this, test statistics are unreliable regardless of p-value.</li>
+  <li><strong>ExWAS threshold</strong> p &lt; 2.5×10⁻⁶ corresponds to ~20,000 genes. Some groups use the stricter p &lt; 6.7×10⁻⁷ when testing multiple masks × tests.</li>
+  <li><strong>Heterogeneity with K=2</strong> is very low-powered. P_HET &gt; 0.05 does not mean the two cohorts agree — it means you cannot detect disagreement with only 2 cohorts.</li>
+  <li><strong>REMETA's key innovation</strong>: one sparse LD reference per study, not per phenotype. This enables PheWAS at biobank scale without gigabyte file sharing per trait.</li>
+</ul>
+
+<p class="ref">References: Mbatchou et al., Nat Genet, 2021 [REGENIE] · Mbatchou et al., bioRxiv, 2024 [REMETA] · Lee et al., Biostatistics, 2012 [SKAT-O] · Akbari et al., Science, 2021 [GPR75] · Grant et al., Nat Genet, 2006 [TCF7L2]</p>
+
+<div class="teal-note" style="margin-top:1.5rem">
+  <strong>Congratulations!</strong> You have completed both SISG26 practicals. You can now:
+  <ul style="margin:0.5rem 0 0 1.2rem;line-height:2;">
+    <li>Perform and interpret fixed-effects GWAS meta-analysis using METAL</li>
+    <li>Understand heterogeneity statistics (I², Cochran's Q) and their limitations</li>
+    <li>Describe the REGENIE → REMETA pipeline for gene-based ExWAS meta-analysis</li>
+    <li>Interpret REMETA output (Burden/SKAT-O p-values, MAC, mask composition)</li>
+    <li>Apply appropriate significance thresholds for both GWAS and ExWAS meta-analysis</li>
+  </ul>
+</div>
+
+</div>
+
+<div class="footer">
+  SISG26 · Meta-Analysis in Statistical Genetics ·
+  <a href="https://github.com/moeenriaz2/SISG26" style="color:#85B7EB">github.com/moeenriaz2/SISG26</a>
+  · Inspired by SISG 2025 QG3 (Mbatchou &amp; Epstein)
+</div>
+</body>
+</html>
