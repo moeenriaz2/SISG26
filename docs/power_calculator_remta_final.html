@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GWAS Power Calculator — SISG26</title>
+<style>
+  :root {
+    --navy: #1E3A5F; --blue: #185FA5; --ltblue: #EBF3FB;
+    --teal: #0F6E56; --amber: #BA7517; --green: #3B6D11;
+    --red: #A32D2D; --gray: #5F5E5A; --offwh: #F8FAFD;
+    --lgray: #F1EFE8; --border: #D3D1C7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--offwh); color: #1a1a1a; min-height: 100vh; }
+
+  nav { background: var(--navy); padding: 0 1.5rem; display: flex; align-items: center; gap: 1.5rem; height: 50px; }
+  nav .brand { color: #fff; font-weight: 600; font-size: 14px; }
+  nav a { color: #B5D4F4; text-decoration: none; font-size: 13px; }
+  nav a:hover { color: #fff; }
+
+  .hero { background: linear-gradient(135deg, var(--navy) 0%, #2E5A8E 100%); color: #fff; padding: 2rem 1.5rem 1.5rem; }
+  .hero h1 { font-size: 1.7rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .hero p  { font-size: 13px; color: #B5D4F4; }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; }
+  .card h2 { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--lgray); }
+
+  .slider-row { margin-bottom: 1rem; }
+  .slider-row label { font-size: 12px; color: var(--gray); display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .slider-row label span { font-weight: 600; color: var(--navy); font-size: 13px; }
+  input[type=range] { width: 100%; height: 4px; border-radius: 2px; outline: none; cursor: pointer; -webkit-appearance: none; background: var(--ltblue); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--blue); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); cursor: pointer; }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--blue); border: 2px solid #fff; cursor: pointer; }
+
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+  .metric { background: var(--offwh); border-radius: 8px; padding: 0.75rem; text-align: center; border: 1px solid var(--border); }
+  .metric .label { font-size: 11px; color: var(--gray); margin-bottom: 4px; }
+  .metric .value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+
+  .power-bar-wrap { margin-bottom: 1rem; }
+  .power-bar-track { height: 14px; background: var(--lgray); border-radius: 7px; overflow: hidden; }
+  .power-bar-fill  { height: 100%; border-radius: 7px; transition: width 0.35s ease, background 0.35s ease; }
+  .verdict { font-size: 13px; line-height: 1.6; color: #333; padding: 0.75rem; border-radius: 6px; border-left: 3px solid; margin-bottom: 0; }
+
+  .formula-box { background: var(--ltblue); border: 1px solid #B5D4F4; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem; }
+  .formula-box p { font-size: 12px; font-weight: 600; color: var(--navy); margin-bottom: 0.5rem; }
+  .formula-line { font-family: 'Courier New', monospace; font-size: 12px; color: var(--navy); line-height: 2; }
+  .formula-line .hi { color: var(--blue); font-weight: 700; }
+  .formula-line .muted { color: var(--gray); }
+
+  .scenario-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 0.5rem; }
+  .scenario-table th { background: var(--navy); color: #fff; padding: 6px 8px; text-align: left; font-weight: 500; }
+  .scenario-table td { padding: 6px 8px; border-bottom: 1px solid var(--lgray); vertical-align: middle; }
+  .scenario-table tr:nth-child(even) td { background: var(--offwh); }
+  .scenario-table tr { cursor: pointer; transition: background 0.15s; }
+  .scenario-table tr:not(:first-child):hover td { background: var(--ltblue) !important; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+  .b-red   { background: #FCEBEB; color: var(--red); }
+  .b-amber { background: #FAEEDA; color: var(--amber); }
+  .b-green { background: #EAF3DE; color: var(--green); }
+
+  .full { grid-column: 1 / -1; }
+
+  code { background: #EBF3FB; color: var(--navy); font-size: 12px; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; }
+  .ref { font-size: 11px; color: var(--gray); font-style: italic; margin-top: 0.5rem; }
+
+  .footer { background: var(--navy); color: #B5D4F4; text-align: center; padding: 1.2rem; font-size: 12px; margin-top: 1.5rem; }
+  .footer a { color: #85B7EB; text-decoration: none; }
+
+  @media (max-width: 640px) {
+    .main { grid-template-columns: 1fr; }
+    .full { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">SISG26</span>
+  <a href="index.html">Home</a>
+  <a href="practical_METAL.html">METAL Practical</a>
+  <a href="practical_REMETA.html">REMETA Practical</a>
+  <a href="https://github.com/moeenriaz2/SISG26" target="_blank">GitHub ↗</a>
+</nav>
+
+<div class="hero">
+  <h1>GWAS Power Calculator</h1>
+  <p>Adjust the sliders to see how sample size, effect size, allele frequency and case fraction affect statistical power at the genome-wide significance threshold.</p>
+</div>
+
+<div class="main">
+
+  <!-- LEFT: Sliders -->
+  <div class="card">
+    <h2>Parameters</h2>
+
+    <div class="slider-row">
+      <label>Sample size (N) <span id="nLabel">N = 10,000</span></label>
+      <input type="range" id="slN" min="200"  max="500000" step="200"  value="10000" oninput="update()">
+    </div>
+
+    <div class="slider-row">
+      <label>Odds ratio (OR) <span id="orLabel">OR = 1.12</span></label>
+      <input type="range" id="slOR" min="100" max="250" step="1" value="112" oninput="update()">
+    </div>
+
+    <div class="slider-row">
+      <label>Minor allele frequency (MAF) <span id="mafLabel">MAF = 0.20</span></label>
+      <input type="range" id="slMAF" min="1" max="49" step="1" value="20" oninput="update()">
+    </div>
+
+    <div class="slider-row">
+      <label>Case fraction (π) <span id="cfLabel">50% cases</span></label>
+      <input type="range" id="slCF" min="10" max="50" step="5" value="50" oninput="update()">
+    </div>
+
+    <div class="formula-box">
+      <p>Formula (Purcell et al., Am J Hum Genet, 2003)</p>
+      <div class="formula-line">
+        <span class="hi">λ</span> = β² × 2p(1−p) × <span class="hi">N_eff</span><br>
+        <span class="muted">N_eff = 4N × π(1−π)</span><br>
+        <span class="muted">β = ln(OR),  p = MAF</span><br>
+        <span class="hi">Power</span> = Φ(√λ − 5.45)
+      </div>
+    </div>
+
+    <div id="ncp" style="font-size:12px;color:var(--gray);margin-top:0.25rem"></div>
+  </div>
+
+  <!-- RIGHT: Results -->
+  <div class="card">
+    <h2>Results</h2>
+
+    <div class="result-grid">
+      <div class="metric">
+        <div class="label">Statistical power</div>
+        <div class="value" id="powerVal" style="color:var(--red)">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">NCP (λ)</div>
+        <div class="value" id="ncpVal" style="color:var(--navy)">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Effective N</div>
+        <div class="value" id="neffVal" style="color:var(--navy);font-size:1.2rem">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Z threshold</div>
+        <div class="value" style="color:var(--gray);font-size:1.3rem">5.45</div>
+      </div>
+    </div>
+
+    <div class="power-bar-wrap">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray);margin-bottom:5px">
+        <span>0%</span><span>80% target</span><span>100%</span>
+      </div>
+      <div class="power-bar-track">
+        <div class="power-bar-fill" id="powerBar" style="width:0%;background:var(--red)"></div>
+      </div>
+      <div style="position:relative;height:12px;">
+        <div style="position:absolute;left:80%;top:0;width:1px;height:8px;background:var(--gray)"></div>
+      </div>
+    </div>
+
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- FULL WIDTH: Pre-set scenarios -->
+  <div class="card full">
+    <h2>Click a scenario to load it</h2>
+    <table class="scenario-table">
+      <thead>
+        <tr><th>Scenario</th><th>N</th><th>OR</th><th>MAF</th><th>Cases %</th><th>Power</th><th>Lesson</th></tr>
+      </thead>
+      <tbody id="scenarioBody"></tbody>
+    </table>
+    <p class="ref" style="margin-top:0.75rem">All scenarios are simulated for teaching. Effect sizes inspired by published GWAS literature (Frayling 2007, Wood 2014, Locke 2015).</p>
+  </div>
+
+</div>
+
+<div class="footer">
+  SISG26 · GWAS Power Calculator ·
+  <a href="https://github.com/moeenriaz2/SISG26" target="_blank">github.com/moeenriaz2/SISG26</a>
+  · Formula: Purcell et al., <em>Am J Hum Genet</em>, 2003
+</div>
+
+<script>
+const scenarios = [
+  {label:'Single hospital cohort',     n:5000,   or:1.12, maf:0.20, cf:50, lesson:'Virtually blind — any hit almost certainly a false positive [Simulated]'},
+  {label:'Candidate gene era (1990s)', n:800,    or:1.45, maf:0.85, cf:50, lesson:'TCF7L2-like (Grant 2006): OR=1.45, MAF=0.85 gives 44% power at N=800 — borderline but discoverable. Impossible for OR=1.12 at same N. Shows why early wins needed large effects + common variants.'},
+  {label:'Early single GWAS',          n:14000,  or:1.10, maf:0.20, cf:50, lesson:'WTCCC-scale: powered only for large effects [Real: WTCCC 2007]'},
+  {label:'Moderate consortium',        n:50000,  or:1.12, maf:0.20, cf:50, lesson:'Half of real associations are still missed [Simulated]'},
+  {label:'Large consortium (GIANT)',   n:253288, or:1.05, maf:0.30, cf:50, lesson:'Wood 2014: 697 height loci at N=253K [Real: Wood 2014]'},
+  {label:'Biobank-scale meta-analysis',n:500000, or:1.08, maf:0.20, cf:50, lesson:'Well powered for common variants with moderate effects [Simulated]'},
+  {label:'Rare variant (common OR)',   n:500000, or:2.00, maf:0.005,cf:50, lesson:'GPR75-like: OR=2, MAF<1% — needs biobank N [Real: Akbari 2021]'},
+  {label:'Case-control imbalance',     n:100000, or:1.15, maf:0.20, cf:10, lesson:'10% cases: N_eff much smaller — power drops sharply [Simulated]'},
+];
+
+function ncdf(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp(-z * z / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return z > 0 ? 1 - p : p;
+}
+
+function calcPower(N, OR, maf, cf) {
+  const beta = Math.log(OR);
+  const p = maf / 100;
+  const pi = cf / 100;
+  const neff = 4 * N * pi * (1 - pi);
+  const lam = beta * beta * 2 * p * (1 - p) * neff;
+  const sqrtL = Math.sqrt(Math.max(0, lam));
+  const pwr = Math.max(0, Math.min(1, ncdf(sqrtL - 5.45) + ncdf(-sqrtL - 5.45)));
+  return { power: pwr, ncp: lam, neff };
+}
+
+function update() {
+  const N   = +document.getElementById('slN').value;
+  const OR  = document.getElementById('slOR').value / 100;
+  const maf = +document.getElementById('slMAF').value;
+  const cf  = +document.getElementById('slCF').value;
+
+  document.getElementById('nLabel').textContent  = 'N = ' + N.toLocaleString();
+  document.getElementById('orLabel').textContent  = 'OR = ' + OR.toFixed(2);
+  document.getElementById('mafLabel').textContent = 'MAF = ' + (maf/100).toFixed(2);
+  document.getElementById('cfLabel').textContent  = cf + '% cases';
+
+  const { power, ncp, neff } = calcPower(N, OR, maf, cf);
+  const pct = Math.round(power * 100);
+
+  const color = pct < 20 ? 'var(--red)' : pct < 60 ? 'var(--amber)' : pct < 80 ? '#185FA5' : 'var(--green)';
+
+  document.getElementById('powerVal').textContent = pct + '%';
+  document.getElementById('powerVal').style.color  = color;
+  document.getElementById('ncpVal').textContent    = ncp.toFixed(1);
+  document.getElementById('neffVal').textContent   = Math.round(neff).toLocaleString();
+
+  const bar = document.getElementById('powerBar');
+  bar.style.width      = Math.max(1, pct) + '%';
+  bar.style.background = color;
+
+  document.getElementById('ncp').textContent =
+    'β = ln(' + OR.toFixed(2) + ') = ' + Math.log(OR).toFixed(4) +
+    '  |  N_eff = ' + Math.round(neff).toLocaleString() +
+    '  |  λ = ' + ncp.toFixed(2);
+
+  const v = document.getElementById('verdict');
+  if (pct < 20) {
+    v.textContent = 'Severely underpowered (' + pct + '%). Any genome-wide significant result at this N is likely a false positive. Effect sizes reported will be inflated (winner\'s curse).';
+    v.style.borderLeftColor = 'var(--red)'; v.style.background = '#FEF5F5';
+  } else if (pct < 60) {
+    v.textContent = 'Underpowered (' + pct + '%). This study will miss the majority of real associations. Published effect sizes will be inflated. Meta-analysis with additional cohorts is essential.';
+    v.style.borderLeftColor = 'var(--amber)'; v.style.background = '#FFFAF0';
+  } else if (pct < 80) {
+    v.textContent = 'Approaching adequate power (' + pct + '%). Below the conventional 80% threshold. Consider combining with additional cohorts. Effect sizes are closer to truth but still slightly inflated.';
+    v.style.borderLeftColor = 'var(--blue)'; v.style.background = '#EBF3FB';
+  } else {
+    v.textContent = 'Well powered (' + pct + '% ≥ 80%). Discoveries at this sample size are likely to replicate. Effect sizes are close to the true population value — suitable for trial design and PRS development.';
+    v.style.borderLeftColor = 'var(--green)'; v.style.background = '#F0FFF4';
+  }
+
+  refreshScenarioTable();
+}
+
+function loadScenario(s) {
+  const slN = document.getElementById('slN');
+  if (s.n < +slN.min) slN.min = s.n;   // expand range if scenario N is below slider min
+  slN.value = s.n;
+  document.getElementById('slOR').value  = Math.round(s.or * 100);
+  document.getElementById('slMAF').value = s.maf * 100;
+  document.getElementById('slCF').value  = s.cf;
+  update();
+}
+
+function powerBadge(pct) {
+  if (pct < 20)  return '<span class="badge b-red">'  + pct + '%</span>';
+  if (pct < 80)  return '<span class="badge b-amber">' + pct + '%</span>';
+  return '<span class="badge b-green">' + pct + '%</span>';
+}
+
+function refreshScenarioTable() {
+  const tb = document.getElementById('scenarioBody');
+  tb.innerHTML = scenarios.map(s => {
+    const { power } = calcPower(s.n, s.or, s.maf * 100, s.cf);
+    const pct = Math.round(power * 100);
+    return `<tr onclick="loadScenario(${JSON.stringify(s).replace(/"/g,"&quot;")})">
+      <td><strong>${s.label}</strong></td>
+      <td>${s.n.toLocaleString()}</td>
+      <td>${s.or.toFixed(2)}</td>
+      <td>${s.maf.toFixed(3)}</td>
+      <td>${s.cf}%</td>
+      <td>${powerBadge(pct)}</td>
+      <td style="font-size:11px;color:var(--gray)">${s.lesson}</td>
+    </tr>`;
+  }).join('');
+}
+
+update();
+</script>
+
+<script>
+(function patchVerdictBug(){
+  const v = document.getElementById('verdict');
+  if(v && v.style.background && v.style.background.includes('var(--ltblue)')){
+    v.style.background = '#EBF3FB';
+  }
+})();
+
+document.getElementById('slN').addEventListener('input', function(){
+  if(document.getElementById('verdict').style.background.includes('var(--ltblue)'))
+    document.getElementById('verdict').style.background = '#EBF3FB';
+});
+</script>
+
+</body>
+</html>
