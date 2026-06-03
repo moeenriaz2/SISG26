@@ -74,7 +74,7 @@
 <div class="container">
 
   <div class="note">
-    <strong>Inspired by:</strong> SISG 2025 Module QG3 by Joelle Mbatchou &amp; Michael Epstein (<a href="https://joellembatchou.github.io/SISG2025_Association_Mapping/" target="_blank">joellembatchou.github.io/SISG2025_Association_Mapping</a>). Exercises here extend that module to multi-cohort meta-analysis.
+    <strong>Inspired by:</strong> SISG 2025 Module QG3 by Joelle Mbatchou (<a href="https://joellembatchou.github.io/SISG2025_Association_Mapping/" target="_blank">joellembatchou.github.io/SISG2025_Association_Mapping</a>). Exercises here extend that module to multi-cohort meta-analysis.
   </div>
 
   <h2>Session Format</h2>
@@ -111,7 +111,7 @@ devtools::install_github("yaowuliu/ACAT")</pre>
         <td><strong>0</strong></td>
         <td>
           <strong>GWAS Power Calculator</strong><br>
-          <span style="font-size:12px;color:#666">Interactive tool — adjust N, OR, MAF and case fraction. Pre-loaded scenarios from candidate gene era to biobank scale. Click any scenario row to load it. Slider range: N = 200 – 500,000.</span>
+          <span style="font-size:12px;color:#666">Interactive tool using the Purcell et al. (Bioinformatics, 2003) formula: λ = β² × 2p(1−p) × N_eff, Power = Φ(√λ − 5.45). Sliders for N (200–1,200,000), OR, MAF, and case fraction. Eight scenarios spanning candidate-gene era to biobank scale — including real studies (TCF7L2, WTCCC 2007, GIANT height, GPR75 BMI, Mahajan 2022 T2D) with accurate case fractions. Quantitative trait studies (height, BMI) correctly show no case fraction. Click any row to load scenario.</span>
         </td>
         <td><span class="badge b-blue">Interactive tool</span></td>
         <td><a href="power_calculator.html">Open Calculator</a></td>
@@ -153,7 +153,8 @@ devtools::install_github("yaowuliu/ACAT")</pre>
 
   <h2>Additional Resources</h2>
   <ul style="margin: 0.5rem 0 1rem 1.5rem; font-size: 14px; line-height: 2.2;">
-    <li><a href="https://joellembatchou.github.io/SISG2025_Association_Mapping/" target="_blank">SISG 2025 QG3 — Association Mapping (Mbatchou &amp; Epstein)</a></li>
+    <li><a href="power_calculator.html">GWAS Power Calculator (this site) — formula: Purcell, Cherny &amp; Sham, <em>Bioinformatics</em>, 2003</a></li>
+    <li><a href="https://joellembatchou.github.io/SISG2025_Association_Mapping/" target="_blank">SISG 2025 QG3 — Association Mapping (Mbatchou)</a></li>
     <li><a href="https://csg.sph.umich.edu/abecasis/metal/download/" target="_blank">METAL software (Willer, Li, Abecasis, Bioinformatics 2010)</a></li>
     <li><a href="https://github.com/rgcgithub/remeta" target="_blank">REMETA software (Mbatchou et al., bioRxiv 2024)</a></li>
     <li><a href="https://github.com/rgcgithub/regenie" target="_blank">REGENIE software (Mbatchou et al., Nat Genet 2021)</a></li>
